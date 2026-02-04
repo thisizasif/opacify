@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Login</title>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f172a;
+      padding: 1.5rem; 
+    }
+
+    body::before, body::after {
+      content: "";
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      z-index: -1;
+      filter: blur(80px);
+      opacity: 0.6;
+    }
+
+    body::after {
+      background: linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%);
+      right: 5%;
+      bottom: 5%;
+    }
+
+    .login-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 28px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      width: 100%;
+      max-width: 480px;
+      padding: 3rem 2rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1 {
+      color: #fff;
+      font-size: clamp(1.5rem, 5vw, 2rem);
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 1rem;
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .field {
+      position: relative;
+      width: 100%;
+    }
+
+    input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1rem 1.25rem;
+      border-radius: 14px;
+      color: #fff;
+      font-size: 16px;
+      transition: 0.3s ease;
+    }
+
+    input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #6366f1;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+    }
+
+    button {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .toggle {
+      position: absolute;
+      right: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      cursor: pointer;
+      font-size: 1.2rem;
+      user-select: none;
+    }
+
+    .status-indicator {
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: pulse 2s infinite;
+      display: none;
+    }
+
+    .status-dot.connected {
+      background: #10b981;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Toast notification styles */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 10px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 300px;
+      animation: slideIn 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .toast.success {
+      border-left: 4px solid #10b981;
+    }
+
+    .toast.error {
+      border-left: 4px solid #ef4444;
+    }
+
+    .toast.warning {
+      border-left: 4px solid #f59e0b;
+    }
+
+    .toast.info {
+      border-left: 4px solid #3b82f6;
+    }
+
+    .toast-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+  </style>
+
+  <div class="login-wrapper">
+    <div class="login-card">
+      <h1>Secure Login</h1>
+      <p class="subtitle">Enter your credentials to continue</p>
+
+      <form id="loginForm">
+        <div class="field">
+          <input type="text" id="username" placeholder="Username" required autocomplete="username" />
+        </div>
+
+        <div class="field password-field">
+          <input type="password" id="password" placeholder="Password" required autocomplete="current-password" />
+          <span class="toggle" id="togglePassword">👁</span>
+        </div>
+
+        <button type="submit" id="loginBtn">Login</button>
+        
+        <div class="status-indicator">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Initializing...</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAQ2wSju_OjxHCb2v-qsiTg2FMZv02TzhQ",
+      authDomain: "opacify.firebaseapp.com",
+      projectId: "opacify",
+      storageBucket: "opacify.firebasestorage.app",
+      messagingSenderId: "734434138723",
+      appId: "1:734434138723:web:0e8524f0c5415b94f33656"
+    };
+
+    // Global variables
+    let db = null;
+    let firebaseInitialized = false;
+
+    // DOM Elements
+    const loginForm = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const togglePassword = document.getElementById('togglePassword');
+    const loginBtn = document.getElementById('loginBtn');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+
+    // Toast notification function
+    function showToast(message, type = "info") {
+      const container = document.getElementById('toastContainer');
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      
+      const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      toast.innerHTML = `
+        <span class="toast-icon">${icons[type] || icons.info}</span>
+        <span>${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Auto remove after 4 seconds
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+          if (toast.parentNode === container) {
+            container.removeChild(toast);
+          }
+        }, 300);
+      }, 4000);
+      
+      return toast;
+    }
+
+    // Initialize Firebase
+    function initializeFirebase() {
+      try {
+        // Initialize Firebase if not already initialized
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        
+        // Get Firestore instance
+        db = firebase.firestore();
+        
+        // Enable network
+        db.enableNetwork()
+          .then(() => {
+            firebaseInitialized = true;
+            updateConnectionStatus(true);
+            showToast('Connected to database', 'success');
+          })
+          .catch((error) => {
+            updateConnectionStatus(false);
+            showToast('Network connection issue', 'warning');
+          });
+        
+      } catch (error) {
+        updateConnectionStatus(false);
+        showToast('Failed to initialize database', 'error');
+      }
+    }
+
+    // Update connection status UI
+    function updateConnectionStatus(connected) {
+      if (connected) {
+        statusDot.classList.add('connected');
+        statusText.textContent = '';
+        statusText.style.color = '#10b981';
+      } else {
+        statusDot.classList.remove('connected');
+        statusText.textContent = 'Disconnected';
+        statusText.style.color = '#ef4444';
+      }
+    }
+
+    // Check user credentials in Firestore
+    async function checkUserCredentials(username, password) {
+      if (!db || !firebaseInitialized) {
+        showToast('Database not available', 'error');
+        return { success: false, error: 'Database not connected' };
+      }
+
+      try {
+        // Get document from users collection where document ID = username
+        const userDocRef = db.collection('users').doc(username);
+        const userDoc = await userDocRef.get();
+        
+        if (!userDoc.exists) {
+          showToast('Invalid username or password', 'error');
+          return { success: false, error: 'User not found' };
+        }
+        
+        const userData = userDoc.data();
+        
+        // Validate that the document has required fields
+        if (!userData.username || !userData.password) {
+          showToast('Invalid user data in database', 'error');
+          return { success: false, error: 'Invalid data structure' };
+        }
+        
+        // Check if username in document matches (case-sensitive)
+        if (userData.username !== username) {
+          showToast('Username mismatch', 'error');
+          return { success: false, error: 'Username mismatch' };
+        }
+        
+        // Check password
+        if (userData.password === password) {
+          // Successful login
+          const userInfo = {
+            username: userData.username,
+            documentId: userDoc.id,
+          };
+          
+          return { 
+            success: true, 
+            user: userInfo,
+            message: 'Login successful'
+          };
+        } else {
+          showToast('Invalid username or password', 'error');
+          return { success: false, error: 'Incorrect password' };
+        }
+        
+      } catch (error) {
+        let errorMessage = 'Database error';
+        if (error.code === 'permission-denied') {
+          errorMessage = 'Access denied. Please contact administrator.';
+        } else if (error.code === 'unavailable') {
+          errorMessage = 'Service temporarily unavailable';
+        }
+        
+        showToast(errorMessage, 'error');
+        return { success: false, error: error.message };
+      }
+    }
+
+    // Handle form submission
+    async function handleLogin(event) {
+      event.preventDefault();
+      
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
+      
+      // Basic validation
+      if (!username || !password) {
+        showToast('Please enter both username and password', 'warning');
+        return;
+      }
+      
+      if (username.length < 3) {
+        showToast('Username must be at least 3 characters', 'warning');
+        return;
+      }
+      
+      if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'warning');
+        return;
+      }
+      
+      // Disable form and show loading
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Authenticating...';
+      
+      try {
+        const result = await checkUserCredentials(username, password);
+        
+        if (result.success) {
+          // Login successful
+          showToast(`Welcome, ${result.user.username}!`, 'success');
+          
+          // Store login state
+          localStorage.setItem('userLoggedIn', 'true');
+          localStorage.setItem('username', result.user.username);
+          
+          // Redirect to main/opacify.html after 1.5 seconds
+          setTimeout(() => {
+            window.location.href = 'main/opacify.html';
+          }, 1500);
+          
+        } else {
+          // Login failed
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Sign In';
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+        
+      } catch (error) {
+        showToast('Login failed. Please try again.', 'error');
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign In';
+      }
+    }
+
+    // Toggle password visibility
+    togglePassword.addEventListener('click', function() {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      this.textContent = type === 'password' ? '👁' : '🙈';
+    });
+
+    // Form event listeners
+    loginForm.addEventListener('submit', handleLogin);
+    
+    // Keyboard shortcuts
+    usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !passwordInput.value) {
+        e.preventDefault();
+        passwordInput.focus();
+      }
+    });
+    
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (usernameInput.value && passwordInput.value) {
+          handleLogin(e);
+        }
+      }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if already logged in
+      const isLoggedIn = localStorage.getItem('userLoggedIn');
+      if (isLoggedIn === 'true') {
+        // Redirect directly to main/opacify.html if already logged in
+        window.location.href = 'main/opacify.html';
+        return;
+      }
+      
+      // Initialize Firebase
+      initializeFirebase();
+      
+      // Focus on username input
+      usernameInput.focus();
+    });
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Opacify - Invisible Text Converter</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #121a32;
+      --muted: #9db0d0;
+      --text: #e8efff;
+      --accent: #6ea8ff;
+      --accent-2: #79f2c0;
+      --danger: #ff6b6b;
+      --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Full screen app on large screens */
+    .app {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Desktop - full screen layout */
+    @media (min-width: 768px) {
+      .app {
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    /* Mobile - card layout */
+    @media (max-width: 767px) {
+      body {
+        padding: 16px;
+        overflow: auto;
+      }
+      
+      .app {
+        max-width: 95vw;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        max-height: 95vh;
+        min-height: auto;
+      }
+    }
+
+    /* Header - full width on desktop */
+    header {
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      background: linear-gradient(180deg, rgba(110, 168, 255, .12), transparent);
+      flex-shrink: 0;
+      height: 70px;
+    }
+
+    header .logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: conic-gradient(from 220deg at 50% 50%, var(--accent), var(--accent-2));
+      filter: drop-shadow(0 2px 8px rgba(110, 168, 255, .35));
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 20px;
+      margin: 0;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    header .sub {
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 480px) {
+      header .sub {
+        display: none;
+      }
+      
+      header {
+        padding: 16px 20px;
+        height: 60px;
+      }
+    }
+
+    /* Main content area - uses all available space */
+    .main-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      padding: 20px;
+    }
+
+    @media (max-width: 767px) {
+      .main-content {
+        padding: 16px;
+        flex-direction: column;
+        overflow: auto;
+      }
+    }
+
+    /* Grid layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: 100%;
+      height: 100%;
+    }
+
+    @media (max-width: 767px) {
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        height: auto;
+      }
+    }
+
+    /* Large desktop - maximize space */
+    @media (min-width: 1400px) {
+      .grid {
+        gap: 32px;
+        padding: 0 40px;
+      }
+      
+      .main-content {
+        padding: 30px;
+      }
+    }
+
+    /* Fields - use full available height */
+    .field {
+      background: rgba(255, 255, 255, .02);
+      border: 1px solid rgba(255, 255, 255, .06);
+      border-radius: 14px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+
+    @media (max-width: 767px) {
+      .field {
+        padding: 16px;
+        height: auto;
+        min-height: 400px;
+      }
+    }
+
+    @media (min-width: 1400px) {
+      .field {
+        padding: 28px;
+      }
+    }
+
+    /* Labels */
+    label {
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 16px;
+      font-size: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    @media (max-width: 767px) {
+      label {
+        margin-bottom: 12px;
+        font-size: 14px;
+      }
+    }
+
+    .char-count {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    /* Textareas - full height on desktop */
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, .08);
+      background: #0e1530;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 15px;
+      resize: none;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(110, 168, 255, .05);
+      flex: 1;
+      min-height: 200px;
+      line-height: 1.5;
+    }
+
+    /* Full height textareas on desktop */
+    @media (min-width: 768px) {
+      textarea {
+        height: calc(100% - 100px);
+        min-height: 300px;
+      }
+    }
+
+    /* Even larger on big screens */
+    @media (min-width: 1400px) {
+      textarea {
+        font-size: 16px;
+        padding: 20px;
+      }
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(110, 168, 255, 0.1);
+    }
+
+    textarea#output {
+      background: rgba(14, 21, 48, 0.7);
+    }
+
+    /* Button rows */
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    @media (max-width: 767px) {
+      .row {
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+      }
+    }
+
+    /* Buttons - proper sizing for all screens */
+    .btn {
+      appearance: none;
+      border: 0;
+      cursor: pointer;
+      padding: 11px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      color: white;
+      background: linear-gradient(180deg, var(--accent), #3c7bff);
+      box-shadow: 0 6px 16px rgba(61, 123, 255, .35);
+      transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
+      flex: 1;
+      min-width: 120px;
+      white-space: nowrap;
+    }
+
+    /* Larger buttons on big screens */
+    @media (min-width: 1400px) {
+      .btn {
+        padding: 13px 24px;
+        font-size: 15px;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .btn {
+        padding: 10px 16px;
+        font-size: 13px;
+        min-width: 0;
+        flex: 1 1 calc(50% - 8px);
+      }
+    }
+
+    .btn:hover {
+      filter: brightness(1.05);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn.secondary {
+      background: linear-gradient(180deg, #2a365c, #1d2744);
+      box-shadow: none;
+      color: #dce6ff;
+      border: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .btn.danger {
+      background: linear-gradient(180deg, #ff7b7b, #dc5b5b);
+      box-shadow: 0 6px 14px rgba(255, 107, 107, .35);
+    }
+
+    /* Hint text */
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 767px) {
+      .hint {
+        display: none;
+      }
+    }
+
+    /* Status */
+    #status {
+      color: var(--accent-2);
+      font-size: 13px;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 767px) {
+      #status {
+        display: none;
+      }
+    }
+
+    /* Footer */
+    .footer {
+      padding: 16px 24px;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      flex-shrink: 0;
+      height: 60px;
+    }
+
+    @media (max-width: 767px) {
+      .footer {
+        padding: 14px 20px;
+        flex-direction: column;
+        gap: 12px;
+        height: auto;
+        text-align: center;
+      }
+    }
+
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(110, 168, 255, .12);
+      color: #cfe1ff;
+      border: 1px solid rgba(110, 168, 255, .25);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* Mobile status toast */
+    .mobile-status {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--card);
+      color: var(--text);
+      padding: 12px 24px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      font-size: 14px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      max-width: 90%;
+      text-align: center;
+    }
+
+    @media (max-width: 767px) {
+      .mobile-status {
+        display: block;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      .mobile-status.show {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Opacify</h1>
+      <span class="sub">Invisible Text Converter</span>
+    </header>
+
+    <div class="main-content">
+      <div class="grid">
+        <div class="field">
+          <label for="input">
+            Input Text
+            <span class="char-count" id="inputCount">0 chars</span>
+          </label>
+          <!-- <textarea id="input" placeholder="Type text to encode or paste invisible text to decode...">Hello, this is a secret message!</textarea> -->
+          <textarea id="input" placeholder="Type text to encode or paste invisible text to decode..."></textarea>
+          <div class="row">
+            <button class="btn" id="encodeBtn">Encode</button>
+            <button class="btn" id="decodeBtn">Decode</button>
+            <button class="btn secondary" id="copyInput">Copy Input</button>
+            <button class="btn secondary" id="clearInput">Clear</button>
+            <span class="hint">Shift+Enter=Decode • Ctrl+Enter=Encode</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="output">
+            Result
+            <span class="char-count" id="outputCount">0 chars</span>
+          </label>
+          <textarea id="output" placeholder="Result appears here..." readonly></textarea>
+          <div class="row">
+            <button class="btn" id="copyBtn">Copy Result</button>
+            <button class="btn secondary" id="clearOutput">Clear</button>
+            <button class="btn danger" id="swapBtn" title="Swap input and output">Swap</button>
+            <span class="hint" id="status">Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="pill">Zero-width Character Converter</div>
+      <div>Opacify • Made with care</div>
+    </div>
+
+    <div class="mobile-status" id="mobileStatus"></div>
+  </div>
+
+  <script>
+    // Zero-width characters
+    const ZERO_WIDTH_SPACE = '\u200B';
+    const ZERO_WIDTH_NON_JOINER = '\u200C';
+    const ZERO_WIDTH_JOINER = '\u200D';
+    
+    // DOM elements
+    const input = document.getElementById('input');
+    const output = document.getElementById('output');
+    const status = document.getElementById('status');
+    const mobileStatus = document.getElementById('mobileStatus');
+    const inputCount = document.getElementById('inputCount');
+    const outputCount = document.getElementById('outputCount');
+
+    // Update character counts
+    function updateCounts() {
+      inputCount.textContent = `${input.value.length} chars`;
+      outputCount.textContent = `${output.value.length} chars`;
+    }
+
+    // Set status message
+    function setStatus(msg, ok = true) {
+      // Desktop status
+      if (status) {
+        status.textContent = msg;
+        status.style.color = ok ? "var(--accent-2)" : "var(--danger)";
+      }
+      
+      // Mobile status toast
+      if (window.innerWidth <= 767) {
+        mobileStatus.textContent = msg;
+        mobileStatus.style.color = ok ? "var(--accent-2)" : "var(--danger)";
+        mobileStatus.classList.add('show');
+        setTimeout(() => {
+          mobileStatus.classList.remove('show');
+        }, 2000);
+      }
+    }
+
+    // Encode text to invisible characters
+    function encodeText() {
+      const text = input.value;
+      if (!text.trim()) { 
+        setStatus("Nothing to encode", false); 
+        return; 
+      }
+      
+      try {
+        let binaryString = '';
+        for (let i = 0; i < text.length; i++) {
+          const binary = text.charCodeAt(i).toString(2).padStart(8, '0');
+          binaryString += binary;
+        }
+        
+        let invisibleText = '';
+        for (let i = 0; i < binaryString.length; i++) {
+          invisibleText += binaryString[i] === '0' ? ZERO_WIDTH_SPACE : ZERO_WIDTH_JOINER;
+          
+          if ((i + 1) % 8 === 0 && i !== binaryString.length - 1) {
+            invisibleText += ZERO_WIDTH_NON_JOINER;
+          }
+        }
+        
+        output.value = invisibleText;
+        setStatus(`Encoded ${text.length} chars → ${invisibleText.length} invisible chars`);
+      } catch (error) {
+        setStatus("Error encoding text", false);
+      }
+      
+      updateCounts();
+    }
+
+    // Decode invisible characters back to text
+    function decodeText() {
+      const invisibleText = input.value;
+      if (!invisibleText.trim()) { 
+        setStatus("Nothing to decode", false); 
+        return; 
+      }
+      
+      try {
+        let binaryString = '';
+        for (let i = 0; i < invisibleText.length; i++) {
+          const char = invisibleText[i];
+          if (char === ZERO_WIDTH_SPACE) {
+            binaryString += '0';
+          } else if (char === ZERO_WIDTH_JOINER) {
+            binaryString += '1';
+          }
+        }
+        
+        let decodedText = '';
+        for (let i = 0; i < binaryString.length; i += 8) {
+          const byte = binaryString.substring(i, i + 8);
+          if (byte.length === 8) {
+            const charCode = parseInt(byte, 2);
+            decodedText += String.fromCharCode(charCode);
+          }
+        }
+        
+        if (decodedText) {
+          output.value = decodedText;
+          setStatus(`Decoded ${decodedText.length} chars`);
+        } else {
+          setStatus("No invisible text found", false);
+        }
+      } catch (error) {
+        setStatus("Error decoding text", false);
+      }
+      
+      updateCounts();
+    }
+
+    // Copy to clipboard
+    async function copyToClipboard(text) {
+      if (!text.trim()) {
+        setStatus("Nothing to copy", false);
+        return;
+      }
+      
+      try { 
+        await navigator.clipboard.writeText(text); 
+        setStatus("Copied to clipboard"); 
+      }
+      catch (e) { 
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          setStatus("Copied to clipboard");
+        } catch (err) {
+          setStatus("Clipboard blocked", false);
+        }
+        
+        document.body.removeChild(textArea);
+      }
+    }
+
+    // Event listeners
+    document.getElementById('encodeBtn').addEventListener('click', encodeText);
+    document.getElementById('decodeBtn').addEventListener('click', decodeText);
+    document.getElementById('copyBtn').addEventListener('click', () => copyToClipboard(output.value));
+    document.getElementById('copyInput').addEventListener('click', () => copyToClipboard(input.value));
+    document.getElementById('clearInput').addEventListener('click', () => { 
+      input.value = ""; 
+      setStatus("Cleared input"); 
+      updateCounts();
+      input.focus();
+    });
+    document.getElementById('clearOutput').addEventListener('click', () => { 
+      output.value = ""; 
+      setStatus("Cleared result"); 
+      updateCounts();
+    });
+    document.getElementById('swapBtn').addEventListener('click', () => { 
+      [input.value, output.value] = [output.value, input.value]; 
+      setStatus("Swapped");
+      updateCounts();
+      input.focus();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { 
+        encodeText(); 
+        e.preventDefault(); 
+      }
+      if (e.shiftKey && e.key === "Enter") { 
+        decodeText(); 
+        e.preventDefault(); 
+      }
+      // Ctrl/Cmd + S to swap
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") { 
+        e.preventDefault();
+        document.getElementById('swapBtn').click();
+      }
+    });
+
+    // Update counts on input
+    input.addEventListener('input', updateCounts);
+    output.addEventListener('input', updateCounts);
+
+    // Make textareas auto-resize on mobile
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+
+    if (window.innerWidth <= 767) {
+      input.addEventListener('input', function() {
+        autoResizeTextarea(this);
+      });
+      
+      output.addEventListener('input', function() {
+        autoResizeTextarea(this);
+      });
+    }
+
+    // Auto-encode on load
+    window.addEventListener('load', () => {
+      updateCounts();
+      setTimeout(encodeText, 100);
+    });
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(updateCounts, 100);
+    });
+
+// this script checks authentication status and redirects accordingly
+
+    // Save this as check-auth.js in your main folder
+(function() {
+    // Check if user is logged in
+    const isLoggedIn = localStorage.getItem('userLoggedIn');
+    const username = localStorage.getItem('username');
+    
+    // Define public paths that don't require authentication
+    const publicPaths = [
+        'index.html',
+        'logout.html',
+        'sorry.html'
+    ];
+    
+    // Get current page filename
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    // If not logged in and trying to access protected page
+    if (!isLoggedIn || isLoggedIn !== 'true') {
+        // Only redirect if current page is not a public page
+        if (!publicPaths.includes(currentPage)) {
+            window.location.href = '/sorry.html';
+        }
+        return;
+    }
+    
+    // If logged in and trying to access login page, redirect to dashboard
+    if (currentPage === 'index.html') {
+        window.location.href = 'main/opacify.html';
+    }
+    
+    // Make username available globally if needed
+    window.currentUser = username;
+    
+    // Optional: Auto-logout after 24 hours (86400000 ms)
+    setTimeout(() => {
+        localStorage.removeItem('userLoggedIn');
+        localStorage.removeItem('username');
+        if (!publicPaths.includes(currentPage)) {
+            window.location.href = '/sorry.html';
+        }
+    }, 86400000);
+})();
+// End of checking authentication script and redirection
+  </script>
+</body>
+</html>
