@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Secure Login</title>
+  <title>Opacify Login</title>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
+
 <body>
   <style>
     * {
@@ -23,10 +25,11 @@
       align-items: center;
       justify-content: center;
       background: #0f172a;
-      padding: 1.5rem; 
+      padding: 1.5rem;
     }
 
-    body::before, body::after {
+    body::before,
+    body::after {
       content: "";
       position: absolute;
       width: 300px;
@@ -160,8 +163,15 @@
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
     }
 
     /* Toast notification styles */
@@ -216,6 +226,7 @@
         transform: translateX(100%);
         opacity: 0;
       }
+
       to {
         transform: translateX(0);
         opacity: 1;
@@ -227,6 +238,7 @@
         transform: translateX(0);
         opacity: 1;
       }
+
       to {
         transform: translateX(100%);
         opacity: 0;
@@ -250,7 +262,7 @@
         </div>
 
         <button type="submit" id="loginBtn">Login</button>
-        
+
         <div class="status-indicator">
           <div class="status-dot" id="statusDot"></div>
           <span id="statusText">Initializing...</span>
@@ -289,24 +301,24 @@
     // Toast notification function
     function showToast(message, type = "info") {
       const container = document.getElementById('toastContainer');
-      
+
       const toast = document.createElement('div');
       toast.className = `toast ${type}`;
-      
+
       const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
+        success: '',
+        error: '',
+        warning: '',
+        info: 'ℹ'
       };
-      
+
       toast.innerHTML = `
         <span class="toast-icon">${icons[type] || icons.info}</span>
         <span>${message}</span>
       `;
-      
+
       container.appendChild(toast);
-      
+
       // Auto remove after 4 seconds
       setTimeout(() => {
         toast.style.animation = 'slideOut 0.3s ease';
@@ -316,7 +328,7 @@
           }
         }, 300);
       }, 4000);
-      
+
       return toast;
     }
 
@@ -327,22 +339,22 @@
         if (!firebase.apps.length) {
           firebase.initializeApp(firebaseConfig);
         }
-        
+
         // Get Firestore instance
         db = firebase.firestore();
-        
+
         // Enable network
         db.enableNetwork()
           .then(() => {
             firebaseInitialized = true;
             updateConnectionStatus(true);
-            showToast('Connected to database', 'success');
+            showToast('', '');
           })
           .catch((error) => {
             updateConnectionStatus(false);
             showToast('Network connection issue', 'warning');
           });
-        
+
       } catch (error) {
         updateConnectionStatus(false);
         showToast('Failed to initialize database', 'error');
@@ -373,26 +385,26 @@
         // Get document from users collection where document ID = username
         const userDocRef = db.collection('users').doc(username);
         const userDoc = await userDocRef.get();
-        
+
         if (!userDoc.exists) {
           showToast('Invalid username or password', 'error');
           return { success: false, error: 'User not found' };
         }
-        
+
         const userData = userDoc.data();
-        
+
         // Validate that the document has required fields
         if (!userData.username || !userData.password) {
           showToast('Invalid user data in database', 'error');
           return { success: false, error: 'Invalid data structure' };
         }
-        
+
         // Check if username in document matches (case-sensitive)
         if (userData.username !== username) {
           showToast('Username mismatch', 'error');
           return { success: false, error: 'Username mismatch' };
         }
-        
+
         // Check password
         if (userData.password === password) {
           // Successful login
@@ -400,9 +412,9 @@
             username: userData.username,
             documentId: userDoc.id,
           };
-          
-          return { 
-            success: true, 
+
+          return {
+            success: true,
             user: userInfo,
             message: 'Login successful'
           };
@@ -410,7 +422,7 @@
           showToast('Invalid username or password', 'error');
           return { success: false, error: 'Incorrect password' };
         }
-        
+
       } catch (error) {
         let errorMessage = 'Database error';
         if (error.code === 'permission-denied') {
@@ -418,7 +430,7 @@
         } else if (error.code === 'unavailable') {
           errorMessage = 'Service temporarily unavailable';
         }
-        
+
         showToast(errorMessage, 'error');
         return { success: false, error: error.message };
       }
@@ -427,46 +439,46 @@
     // Handle form submission
     async function handleLogin(event) {
       event.preventDefault();
-      
+
       const username = usernameInput.value.trim();
       const password = passwordInput.value.trim();
-      
+
       // Basic validation
       if (!username || !password) {
-        showToast('Please enter both username and password', 'warning');
+        showToast('Please enter both username and password', 'pagal ho kya');
         return;
       }
-      
+
       if (username.length < 3) {
-        showToast('Username must be at least 3 characters', 'warning');
+        showToast('Username must be at least 3 characters', 'fucking warning');
         return;
       }
-      
+
       if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'warning');
+        showToast('Password must be at least 6 characters', 'fucking warning');
         return;
       }
-      
+
       // Disable form and show loading
       loginBtn.disabled = true;
       loginBtn.textContent = 'Authenticating...';
-      
+
       try {
         const result = await checkUserCredentials(username, password);
-        
+
         if (result.success) {
           // Login successful
           showToast(`Welcome, ${result.user.username}!`, 'success');
-          
+
           // Store login state
           localStorage.setItem('userLoggedIn', 'true');
           localStorage.setItem('username', result.user.username);
-          
+
           // Redirect to main/opacify.html after 1.5 seconds
           setTimeout(() => {
             window.location.href = 'main/opacify.html';
           }, 1500);
-          
+
         } else {
           // Login failed
           loginBtn.disabled = false;
@@ -474,7 +486,7 @@
           passwordInput.value = '';
           passwordInput.focus();
         }
-        
+
       } catch (error) {
         showToast('Login failed. Please try again.', 'error');
         loginBtn.disabled = false;
@@ -483,7 +495,7 @@
     }
 
     // Toggle password visibility
-    togglePassword.addEventListener('click', function() {
+    togglePassword.addEventListener('click', function () {
       const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
       passwordInput.setAttribute('type', type);
       this.textContent = type === 'password' ? '👁' : '🙈';
@@ -491,7 +503,7 @@
 
     // Form event listeners
     loginForm.addEventListener('submit', handleLogin);
-    
+
     // Keyboard shortcuts
     usernameInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !passwordInput.value) {
@@ -499,7 +511,7 @@
         passwordInput.focus();
       }
     });
-    
+
     passwordInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -518,14 +530,15 @@
         window.location.href = 'main/opacify.html';
         return;
       }
-      
+
       // Initialize Firebase
       initializeFirebase();
-      
+
       // Focus on username input
       usernameInput.focus();
     });
 
   </script>
 </body>
+
 </html>
