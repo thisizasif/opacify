@@ -101,15 +101,30 @@
       flex: 1;
     }
 
-    header .sub {
-      color: var(--muted);
+    /* Logout button in header */
+    .logout-btn {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
       font-size: 14px;
       white-space: nowrap;
     }
 
+    .logout-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      transform: translateY(-1px);
+    }
+
     @media (max-width: 480px) {
-      header .sub {
-        display: none;
+      .logout-btn {
+        padding: 6px 12px;
+        font-size: 13px;
       }
       
       header {
@@ -360,9 +375,9 @@
       }
     }
 
-    /* Footer */
+    /* Footer - NOT sticky anymore */
     .footer {
-      padding: 16px 24px;
+      padding: 20px 24px;
       border-top: 1px solid rgba(255, 255, 255, .06);
       display: flex;
       gap: 16px;
@@ -370,16 +385,14 @@
       justify-content: space-between;
       color: var(--muted);
       font-size: 13px;
-      flex-shrink: 0;
-      height: 60px;
+      background: rgba(255, 255, 255, 0.02);
     }
 
     @media (max-width: 767px) {
       .footer {
-        padding: 14px 20px;
+        padding: 16px 20px;
         flex-direction: column;
         gap: 12px;
-        height: auto;
         text-align: center;
       }
     }
@@ -431,7 +444,8 @@
     <header>
       <div class="logo" aria-hidden="true"></div>
       <h1>Opacify</h1>
-      <span class="sub">Invisible Text Converter</span>
+      <!-- Logout button instead of subtitle -->
+      <a href="../logout.html" class="logout-btn">Logout</a>
     </header>
 
     <div class="main-content">
@@ -441,14 +455,13 @@
             Input Text
             <span class="char-count" id="inputCount">0 chars</span>
           </label>
-          <!-- <textarea id="input" placeholder="Type text to encode or paste invisible text to decode...">Hello, this is a secret message!</textarea> -->
           <textarea id="input" placeholder="Type text to encode or paste invisible text to decode..."></textarea>
           <div class="row">
             <button class="btn" id="encodeBtn">Encode</button>
             <button class="btn" id="decodeBtn">Decode</button>
             <button class="btn secondary" id="copyInput">Copy Input</button>
             <button class="btn secondary" id="clearInput">Clear</button>
-            <span class="hint">Shift+Enter=Decode • Ctrl+Enter=Encode</span>
+            <span class="hint">Ctrl+Enter=Encode • Shift+Enter=Decode</span>
           </div>
         </div>
 
@@ -468,19 +481,20 @@
       </div>
     </div>
 
+    <!-- Footer - not sticky anymore -->
     <div class="footer">
       <div class="pill">Zero-width Character Converter</div>
-      <div>Opacify • Made with care</div>
+      <div>Opacify • Made with Love</div>
     </div>
 
     <div class="mobile-status" id="mobileStatus"></div>
   </div>
 
   <script>
-    // Zero-width characters
-    const ZERO_WIDTH_SPACE = '\u200B';
-    const ZERO_WIDTH_NON_JOINER = '\u200C';
-    const ZERO_WIDTH_JOINER = '\u200D';
+    // Zero-width characters - FIXED VERSION
+    const ZERO_WIDTH_SPACE = '\u200B';      // 0
+    const ZERO_WIDTH_NON_JOINER = '\u200C'; // Separator
+    const ZERO_WIDTH_JOINER = '\u200D';     // 1
     
     // DOM elements
     const input = document.getElementById('input');
@@ -498,13 +512,11 @@
 
     // Set status message
     function setStatus(msg, ok = true) {
-      // Desktop status
       if (status) {
         status.textContent = msg;
         status.style.color = ok ? "var(--accent-2)" : "var(--danger)";
       }
       
-      // Mobile status toast
       if (window.innerWidth <= 767) {
         mobileStatus.textContent = msg;
         mobileStatus.style.color = ok ? "var(--accent-2)" : "var(--danger)";
@@ -515,7 +527,7 @@
       }
     }
 
-    // Encode text to invisible characters
+    // FIXED: Encode text to invisible characters
     function encodeText() {
       const text = input.value;
       if (!text.trim()) { 
@@ -524,17 +536,26 @@
       }
       
       try {
+        // Convert text to binary
         let binaryString = '';
         for (let i = 0; i < text.length; i++) {
-          const binary = text.charCodeAt(i).toString(2).padStart(8, '0');
+          // Get char code and convert to 16-bit binary
+          const charCode = text.charCodeAt(i);
+          const binary = charCode.toString(2).padStart(16, '0');
           binaryString += binary;
         }
         
+        // Convert binary to invisible characters
         let invisibleText = '';
         for (let i = 0; i < binaryString.length; i++) {
-          invisibleText += binaryString[i] === '0' ? ZERO_WIDTH_SPACE : ZERO_WIDTH_JOINER;
+          if (binaryString[i] === '0') {
+            invisibleText += ZERO_WIDTH_SPACE;
+          } else {
+            invisibleText += ZERO_WIDTH_JOINER;
+          }
           
-          if ((i + 1) % 8 === 0 && i !== binaryString.length - 1) {
+          // Add separator after every 16 bits (1 character)
+          if ((i + 1) % 16 === 0 && i !== binaryString.length - 1) {
             invisibleText += ZERO_WIDTH_NON_JOINER;
           }
         }
@@ -542,13 +563,14 @@
         output.value = invisibleText;
         setStatus(`Encoded ${text.length} chars → ${invisibleText.length} invisible chars`);
       } catch (error) {
+        console.error("Encoding error:", error);
         setStatus("Error encoding text", false);
       }
       
       updateCounts();
     }
 
-    // Decode invisible characters back to text
+    // FIXED: Decode invisible characters back to text
     function decodeText() {
       const invisibleText = input.value;
       if (!invisibleText.trim()) { 
@@ -557,22 +579,32 @@
       }
       
       try {
-        let binaryString = '';
-        for (let i = 0; i < invisibleText.length; i++) {
-          const char = invisibleText[i];
-          if (char === ZERO_WIDTH_SPACE) {
-            binaryString += '0';
-          } else if (char === ZERO_WIDTH_JOINER) {
-            binaryString += '1';
-          }
-        }
-        
+        // Split by separator to get character blocks
+        const blocks = invisibleText.split(ZERO_WIDTH_NON_JOINER);
         let decodedText = '';
-        for (let i = 0; i < binaryString.length; i += 8) {
-          const byte = binaryString.substring(i, i + 8);
-          if (byte.length === 8) {
-            const charCode = parseInt(byte, 2);
-            decodedText += String.fromCharCode(charCode);
+        
+        for (const block of blocks) {
+          if (!block) continue;
+          
+          let binaryString = '';
+          for (let i = 0; i < block.length; i++) {
+            if (block[i] === ZERO_WIDTH_SPACE) {
+              binaryString += '0';
+            } else if (block[i] === ZERO_WIDTH_JOINER) {
+              binaryString += '1';
+            }
+          }
+          
+          // Convert binary to character (16 bits per character)
+          if (binaryString.length > 0) {
+            // Process 16-bit chunks
+            for (let i = 0; i < binaryString.length; i += 16) {
+              const chunk = binaryString.substr(i, 16);
+              if (chunk.length === 16) {
+                const charCode = parseInt(chunk, 2);
+                decodedText += String.fromCharCode(charCode);
+              }
+            }
           }
         }
         
@@ -580,9 +612,10 @@
           output.value = decodedText;
           setStatus(`Decoded ${decodedText.length} chars`);
         } else {
-          setStatus("No invisible text found", false);
+          setStatus("No valid invisible text found", false);
         }
       } catch (error) {
+        console.error("Decoding error:", error);
         setStatus("Error decoding text", false);
       }
       
@@ -653,7 +686,6 @@
         decodeText(); 
         e.preventDefault(); 
       }
-      // Ctrl/Cmd + S to swap
       if ((e.ctrlKey || e.metaKey) && e.key === "s") { 
         e.preventDefault();
         document.getElementById('swapBtn').click();
@@ -664,26 +696,10 @@
     input.addEventListener('input', updateCounts);
     output.addEventListener('input', updateCounts);
 
-    // Make textareas auto-resize on mobile
-    function autoResizeTextarea(textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = textarea.scrollHeight + 'px';
-    }
-
-    if (window.innerWidth <= 767) {
-      input.addEventListener('input', function() {
-        autoResizeTextarea(this);
-      });
-      
-      output.addEventListener('input', function() {
-        autoResizeTextarea(this);
-      });
-    }
-
     // Auto-encode on load
     window.addEventListener('load', () => {
       updateCounts();
-      setTimeout(encodeText, 100);
+      setStatus("Ready to encode/decode");
     });
 
     // Handle window resize
@@ -692,52 +708,20 @@
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(updateCounts, 100);
     });
+  </script>
 
-// this script checks authentication status and redirects accordingly
-
-    // Save this as check-auth.js in your main folder
-(function() {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('userLoggedIn');
-    const username = localStorage.getItem('username');
-    
-    // Define public paths that don't require authentication
-    const publicPaths = [
-        'index.html',
-        'logout.html',
-        'sorry.html'
-    ];
-    
-    // Get current page filename
-    const currentPage = window.location.pathname.split('/').pop();
-    
-    // If not logged in and trying to access protected page
-    if (!isLoggedIn || isLoggedIn !== 'true') {
-        // Only redirect if current page is not a public page
-        if (!publicPaths.includes(currentPage)) {
-            window.location.href = '/sorry.html';
-        }
-        return;
-    }
-    
-    // If logged in and trying to access login page, redirect to dashboard
-    if (currentPage === 'index.html') {
-        window.location.href = 'main/opacify.html';
-    }
-    
-    // Make username available globally if needed
-    window.currentUser = username;
-    
-    // Optional: Auto-logout after 24 hours (86400000 ms)
-    setTimeout(() => {
-        localStorage.removeItem('userLoggedIn');
-        localStorage.removeItem('username');
-        if (!publicPaths.includes(currentPage)) {
-            window.location.href = '/sorry.html';
-        }
-    }, 86400000);
-})();
-// End of checking authentication script and redirection
+  <!-- Add authentication check here (AFTER the main script) -->
+  <script>
+    // Simple authentication check for main folder
+    (function() {
+      // Check if user is logged in
+      const isLoggedIn = localStorage.getItem('userLoggedIn');
+      
+      // If not logged in, redirect to sorry.html in root
+      if (!isLoggedIn || isLoggedIn !== 'true') {
+        window.location.href = '../sorry.html';
+      }
+    })();
   </script>
 </body>
 </html>
